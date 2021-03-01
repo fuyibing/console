@@ -1,0 +1,8 @@
+# ignore files
+.idea
+app/
+main/
+tests/
+tmp/
+
+*.bak

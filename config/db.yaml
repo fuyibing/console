@@ -1,0 +1,9 @@
+# {db.yaml}
+# date: 2021-02-28 10:53:00.
+driver: "mysql"
+dsn:
+  - "root:pass@tcp(127.0.0.1:3306)/cn_uniondrug_module_mbs?charset=utf8"
+max-idle: 16
+max-open: 128
+max-lifetime: 60
+mapper: "same"
