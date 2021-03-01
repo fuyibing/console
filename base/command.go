@@ -89,12 +89,15 @@ func (o *Command) SetDefaulter(defaulter bool) { o.defaulter = defaulter }
 // Set command description.
 func (o *Command) SetDescription(description string) { o.description = description }
 
-// Set command name.
-func (o *Command) SetName(name string) { o.name = name }
+// Set handler callback.
+func (o *Command) SetHandler(handler func(iConsole i.IConsole)) { o.handler = handler }
 
 // Set command hidden status.
 // Call in command new method, not export to interface.
 func (o *Command) SetHidden(hidden bool) { o.hidden = hidden }
+
+// Set command name.
+func (o *Command) SetName(name string) { o.name = name }
 
 // Run command.
 func (o *Command) Run(console i.IConsole) {

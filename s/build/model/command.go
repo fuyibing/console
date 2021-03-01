@@ -38,10 +38,10 @@ type command struct {
 	packages map[string]int
 }
 
+// New build model instance.
 func New() i.ICommand {
 	// normal.
-	o := &command{}
-	o.packages = make(map[string]int)
+	o := &command{packages: make(map[string]int)}
 	o.Initialize()
 	o.SetDescription(Description)
 	o.SetName(Name)
@@ -70,7 +70,7 @@ func New() i.ICommand {
 			SetDefaultValue("./app").
 			SetDescription("Application path."),
 	)
-	// override if file exist.
+	// list tables and columns.
 	//   -l
 	//   --list
 	o.Add(
@@ -90,7 +90,7 @@ func New() i.ICommand {
 	return o
 }
 
-// Query.
+// Run command.
 func (o *command) Run(console i.IConsole) {
 	// variables.
 	name := o.GetOption("name").ToString()
@@ -101,9 +101,7 @@ func (o *command) Run(console i.IConsole) {
 	console.Info("Command %s: begin.", o.GetName())
 	console.Info("        name: %s.", exportName)
 	console.Info("        file: %s.", file)
-	defer func() {
-		console.Info("Command %s: completed.", o.GetName())
-	}()
+	defer console.Info("Command %s: completed.", o.GetName())
 	// file exist for not override.
 	if ok, _ := o.fileExist(file); ok && !o.GetOption("override").ToBool() {
 		console.PrintError(errors.New(fmt.Sprintf("Command %s: file exist", o.GetName())))

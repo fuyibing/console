@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	Description = "Build directory for iris application"
+	Description = "Build path for iris application"
 	Name        = "build:path"
 )
 
@@ -23,6 +23,7 @@ type command struct {
 	base.Command
 }
 
+// New build path instance.
 func New() i.ICommand {
 	// normal.
 	o := &command{}
@@ -39,8 +40,10 @@ func New() i.ICommand {
 	return o
 }
 
-// Build directory.
+// Run command.
 func (o *command) Run(console i.IConsole) {
+	console.Info("Command %s: begin", o.GetName())
+	defer console.Info("Command %s: completed", o.GetName())
 	p := o.GetOption("path").ToString()
 	for _, name := range []string{
 		"commands",
@@ -62,6 +65,7 @@ func (o *command) makeDir(console i.IConsole, path string) error {
 	if err := os.MkdirAll(path, os.ModePerm); err != nil {
 		return errors.New(fmt.Sprintf("Command %s: make directory fail: %v", o.GetName(), err))
 	}
+	console.Info("        make: %s", path)
 	// File: open and close.
 	file := path + "/.gitKeep"
 	handler, err := os.OpenFile(file, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
@@ -75,6 +79,6 @@ func (o *command) makeDir(console i.IConsole, path string) error {
 		return errors.New(fmt.Sprintf("Command %s: write file fail: %v", o.GetName(), err))
 	}
 	// Succeed.
-	console.Info("Command %s: reset keep file: %s.", o.GetName(), file)
+	console.Info("        open: %s", file)
 	return nil
 }
