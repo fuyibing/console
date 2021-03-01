@@ -42,18 +42,27 @@ const (
 // Table Body Manager											//
 // ///////////////////////////////////////////////////////////////
 
-// Table body.
-type body struct {
+// Table Body.
+type Body struct {
 	rows []RowInterface
 }
 
-func NewBody() *body {
-	return &body{rows: make([]RowInterface, 0)}
+type BodyInterface interface {
+	Add(rows ...RowInterface) BodyInterface
+	Rows() []RowInterface
 }
 
-func (o *body) Add(rows ...RowInterface) *body {
+func NewBody() BodyInterface {
+	return &Body{rows: make([]RowInterface, 0)}
+}
+
+func (o *Body) Add(rows ...RowInterface) BodyInterface {
 	o.rows = append(o.rows, rows...)
 	return o
+}
+
+func (o *Body) Rows() []RowInterface {
+	return o.rows
 }
 
 // ///////////////////////////////////////////////////////////////
@@ -71,8 +80,8 @@ type Cell struct {
 // Cell interface.
 type CellInterface interface {
 	Content(width int) string
-	SetAlign(align Align) *Cell
-	SetColor(color Color) *Cell
+	SetAlign(align Align) CellInterface
+	SetColor(color Color) CellInterface
 	Width() int
 }
 
@@ -138,13 +147,13 @@ func (o *Cell) Content(width int) (str string) {
 }
 
 // Set cell align.
-func (o *Cell) SetAlign(align Align) *Cell {
+func (o *Cell) SetAlign(align Align) CellInterface {
 	o.align = align
 	return o
 }
 
 // Set cell color.
-func (o *Cell) SetColor(color Color) *Cell {
+func (o *Cell) SetColor(color Color) CellInterface {
 	o.color = color
 	return o
 }
@@ -158,17 +167,26 @@ func (o *Cell) Width() int {
 // Table Header Manager											//
 // ///////////////////////////////////////////////////////////////
 
-type head struct {
+type Head struct {
 	row RowInterface
 }
 
-func NewHead() *head {
-	return &head{row: NewRow()}
+type HeadInterface interface {
+	Add(cells ...CellInterface) HeadInterface
+	Row() RowInterface
 }
 
-func (o *head) Add(cells ...CellInterface) *head {
+func NewHead() HeadInterface {
+	return &Head{row: NewRow()}
+}
+
+func (o *Head) Add(cells ...CellInterface) HeadInterface {
 	o.row.Add(cells...)
 	return o
+}
+
+func (o *Head) Row() RowInterface {
+	return o.row
 }
 
 // ///////////////////////////////////////////////////////////////
@@ -208,15 +226,15 @@ func (o *Row) Cells() []CellInterface {
 
 // Table struct.
 type Table struct {
-	body  *body
-	head  *head
+	body  BodyInterface
+	head  HeadInterface
 	width []int
 }
 
 // Table instance.
 type TableInterface interface {
-	Body() *body
-	Head() *head
+	Body() BodyInterface
+	Head() HeadInterface
 	Print()
 }
 
@@ -229,13 +247,13 @@ func NewTable() TableInterface {
 	}
 }
 
-// Get body struct.
-func (o *Table) Body() *body {
+// Get Body struct.
+func (o *Table) Body() BodyInterface {
 	return o.body
 }
 
-// Get head struct.
-func (o *Table) Head() *head {
+// Get Head struct.
+func (o *Table) Head() HeadInterface {
 	return o.head
 }
 
@@ -247,9 +265,10 @@ func (o *Table) Print() {
 	o.printBottom()
 }
 
+// Print table body.
 func (o *Table) printBody() {
-	// max := len(o.head.row.Cells())
-	for _, row := range o.body.rows {
+	// max := len(o.Head.row.Cells())
+	for _, row := range o.body.Rows() {
 		cs := ""
 		for n, cell := range row.Cells() {
 			// separator
@@ -265,11 +284,11 @@ func (o *Table) printBody() {
 	}
 }
 
-// Print table head.
+// Print table bottom.
 func (o *Table) printBottom() {
 	bs := ""
-	max := len(o.head.row.Cells())
-	for n, _ := range o.head.row.Cells() {
+	max := len(o.head.Row().Cells())
+	for n, _ := range o.head.Row().Cells() {
 		// separator
 		if n == 0 {
 			bs += SyntaxBottomLeftCorner
@@ -288,11 +307,11 @@ func (o *Table) printBottom() {
 	println(bs)
 }
 
-// Print table head.
+// Print table Head.
 func (o *Table) printHead() {
 	bs, ts, cs := "", "", ""
-	max := len(o.head.row.Cells())
-	for n, cell := range o.head.row.Cells() {
+	max := len(o.head.Row().Cells())
+	for n, cell := range o.head.Row().Cells() {
 		// separator
 		if n == 0 {
 			bs += SyntaxMiddleLeft
@@ -323,14 +342,14 @@ func (o *Table) printHead() {
 
 // Reset cell width.
 func (o *Table) resetWidth() {
-	// head width.
+	// Head width.
 	max := 0
-	for _, cell := range o.head.row.Cells() {
+	for _, cell := range o.head.Row().Cells() {
 		o.width = append(o.width, cell.Width())
 		max++
 	}
-	// body width
-	for _, row := range o.body.rows {
+	// Body width
+	for _, row := range o.body.Rows() {
 		for n, cell := range row.Cells() {
 			if n >= max {
 				o.width = append(o.width, cell.Width())

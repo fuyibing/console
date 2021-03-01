@@ -239,19 +239,19 @@ func (o *command) listColumn(name string) error {
 	// append head.
 	table.Head().Add(
 		base.NewCell("ID"),
-		base.NewCell("原字段名"),
-		base.NewCell("导出名称").SetColor(base.ColorBlue),
-		base.NewCell("导出类型").SetColor(base.ColorBlue),
-		base.NewCell("Comment"),
+		base.NewCell("Name").SetColor(base.ColorBlue),
+		base.NewCell("Type").SetColor(base.ColorBlue),
+		base.NewCell("Field Name"),
+		base.NewCell("Field Comment"),
 	)
 	// append body.
 	for n, col := range cols {
 		// append row.
 		table.Body().Add(base.NewRow().Add(
 			base.NewCell(fmt.Sprintf("%d", n+1)).SetAlign(base.AlignRight),
-			base.NewCell(col.Field),
 			base.NewCell(o.toExportName(col.Field)).SetColor(base.ColorBlue),
-			base.NewCell(o.toExportType(col)).SetColor(base.ColorBlue).SetAlign(base.AlignRight),
+			base.NewCell(o.toExportType(col)).SetColor(base.ColorBlue),
+			base.NewCell(col.Field),
 			base.NewCell(col.Comment),
 		))
 	}
@@ -281,7 +281,7 @@ func (o *command) listTables() error {
 	// append head.
 	table.Head().Add(
 		base.NewCell("ID"),
-		base.NewCell("Table Name"),
+		base.NewCell("Name").SetColor(base.ColorBlue),
 		base.NewCell("Created Time"),
 		base.NewCell("Table comment"),
 	)
@@ -290,7 +290,7 @@ func (o *command) listTables() error {
 		// append row.
 		table.Body().Add(base.NewRow().Add(
 			base.NewCell(fmt.Sprintf("%d", n+1)).SetAlign(base.AlignRight),
-			base.NewCell(t.Name),
+			base.NewCell(t.Name).SetColor(base.ColorBlue),
 			base.NewCell(t.Created),
 			base.NewCell(t.Comment),
 		))
