@@ -254,7 +254,7 @@ func (o *command) listColumn(name string) error {
 		))
 	}
 	// print table.
-	table.SetPrefix("        ").Print()
+	table.SetPrefix("        ").SetTitle("List columns of table").Print()
 	return nil
 }
 
@@ -294,7 +294,7 @@ func (o *command) listTables() error {
 		))
 	}
 	// print table.
-	table.SetPrefix("        ").Print()
+	table.SetPrefix("        ").SetTitle("List tables of database").Print()
 	return nil
 }
 

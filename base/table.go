@@ -36,6 +36,8 @@ const (
 	ColorRed
 	ColorBlue
 	ColorGreen
+	ColorLine = 30
+	ColorTitle = 30
 )
 
 // ///////////////////////////////////////////////////////////////
@@ -226,10 +228,12 @@ func (o *Row) Cells() []CellInterface {
 
 // Table struct.
 type Table struct {
-	body   BodyInterface
-	head   HeadInterface
-	prefix string
-	width  []int
+	body       BodyInterface
+	head       HeadInterface
+	prefix     string
+	title      string
+	width      []int
+	outerWidth int
 }
 
 // Table instance.
@@ -238,6 +242,7 @@ type TableInterface interface {
 	Head() HeadInterface
 	Print()
 	SetPrefix(string) TableInterface
+	SetTitle(string) TableInterface
 }
 
 // New table instance.
@@ -262,13 +267,21 @@ func (o *Table) Head() HeadInterface {
 // Print table.
 func (o *Table) Print() {
 	o.resetWidth()
+	o.printTitle()
 	o.printHead()
 	o.printBody()
 	o.printBottom()
 }
 
+// Set table prefix.
 func (o *Table) SetPrefix(prefix string) TableInterface {
 	o.prefix = prefix
+	return o
+}
+
+// Set table title.
+func (o *Table) SetTitle(title string) TableInterface {
+	o.title = title
 	return o
 }
 
@@ -280,12 +293,12 @@ func (o *Table) printBody() {
 		for n, cell := range row.Cells() {
 			// separator
 			if n == 0 {
-				cs += SyntaxSide
+				cs += o.printLineColor(SyntaxSide)
 			}
 			// content.
 			cs += " " + cell.Content(o.width[n]) + " "
 			// end cell
-			cs += SyntaxSide
+			cs += o.printLineColor(SyntaxSide)
 		}
 		println(o.prefix + cs)
 	}
@@ -311,7 +324,7 @@ func (o *Table) printBottom() {
 			bs += SyntaxMiddleBottom
 		}
 	}
-	println(o.prefix + bs)
+	println(o.prefix + o.printLineColor(bs))
 }
 
 // Print table Head.
@@ -321,9 +334,14 @@ func (o *Table) printHead() {
 	for n, cell := range o.head.Row().Cells() {
 		// separator
 		if n == 0 {
+			cs += o.printLineColor(SyntaxSide)
 			bs += SyntaxMiddleLeft
-			ts += SyntaxTopLeftCorner
-			cs += SyntaxSide
+			// with head.
+			if o.title == "" {
+				ts += SyntaxTopLeftCorner
+			} else {
+				ts += SyntaxMiddleLeft
+			}
 		}
 		// content.
 		cs += " " + cell.Content(o.width[n]) + " "
@@ -333,18 +351,71 @@ func (o *Table) printHead() {
 			ts += SyntaxTopSeparator
 		}
 		// end cell
-		cs += SyntaxSide
+		cs += o.printLineColor(SyntaxSide)
 		if n == (max - 1) {
 			bs += SyntaxMiddleRight
-			ts += SyntaxTopRightCorner
+			// with head.
+			if o.title == "" {
+				ts += SyntaxTopRightCorner
+			} else {
+				ts += SyntaxMiddleRight
+			}
 		} else {
-			bs += SyntaxMiddleCrossing
 			ts += SyntaxMiddleTop
+			bs += SyntaxMiddleCrossing
 		}
 	}
-	println(o.prefix + ts)
+	println(o.prefix + o.printLineColor(ts))
 	println(o.prefix + cs)
-	println(o.prefix + bs)
+	println(o.prefix + o.printLineColor(bs))
+}
+
+// Print table title.
+func (o *Table) printTitle() {
+	if o.title == "" {
+		return
+	}
+	// top separator.
+	ts, _ := SyntaxTopLeftCorner, ""
+	for n := 0; n < o.outerWidth; n++ {
+		ts += SyntaxTopSeparator
+	}
+	ts += SyntaxTopRightCorner
+	println(o.prefix + o.printLineColor(ts))
+	// lines.
+	render := func(str string, num int) {
+		for n := num; n < o.outerWidth; n++ {
+			str += " "
+		}
+		println(o.prefix + o.printLineColor(SyntaxSide) + fmt.Sprintf("%c[%d;%dm%s%c[0m", 0x1B, 0, ColorTitle, str, 0x1B) + o.printLineColor(SyntaxSide))
+	}
+	sn := 1
+	ss := " "
+	for _, c := range o.title {
+		// char.
+		cn := 0
+		cs := string(c)
+		if c > 127 {
+			cn = 2
+		} else {
+			cn = 1
+		}
+		// out range.
+		if (sn + cn) > (o.outerWidth - 1) {
+			render(ss, sn)
+			sn = cn + 1
+			ss = " " + cs
+			continue
+		}
+		// inner.
+		sn += cn
+		ss += cs
+	}
+	render(ss, sn)
+}
+
+func (o *Table) printLineColor(str string) string {
+	return fmt.Sprintf("%c[%d;%dm%s%c[0m", 0x1B, 0, ColorLine, str, 0x1B)
 }
 
 // Reset cell width.
@@ -365,6 +436,14 @@ func (o *Table) resetWidth() {
 			if x := o.width[n]; x < cell.Width() {
 				o.width[n] = cell.Width()
 			}
+		}
+	}
+	// outer width.
+	for n, x := range o.width {
+		if n > 0 {
+			o.outerWidth += x + 3
+		} else {
+			o.outerWidth += x + 2
 		}
 	}
 }
