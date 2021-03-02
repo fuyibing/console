@@ -226,9 +226,10 @@ func (o *Row) Cells() []CellInterface {
 
 // Table struct.
 type Table struct {
-	body  BodyInterface
-	head  HeadInterface
-	width []int
+	body   BodyInterface
+	head   HeadInterface
+	prefix string
+	width  []int
 }
 
 // Table instance.
@@ -236,6 +237,7 @@ type TableInterface interface {
 	Body() BodyInterface
 	Head() HeadInterface
 	Print()
+	SetPrefix(string) TableInterface
 }
 
 // New table instance.
@@ -265,6 +267,11 @@ func (o *Table) Print() {
 	o.printBottom()
 }
 
+func (o *Table) SetPrefix(prefix string) TableInterface {
+	o.prefix = prefix
+	return o
+}
+
 // Print table body.
 func (o *Table) printBody() {
 	// max := len(o.Head.row.Cells())
@@ -280,7 +287,7 @@ func (o *Table) printBody() {
 			// end cell
 			cs += SyntaxSide
 		}
-		println(cs)
+		println(o.prefix + cs)
 	}
 }
 
@@ -304,7 +311,7 @@ func (o *Table) printBottom() {
 			bs += SyntaxMiddleBottom
 		}
 	}
-	println(bs)
+	println(o.prefix + bs)
 }
 
 // Print table Head.
@@ -335,9 +342,9 @@ func (o *Table) printHead() {
 			ts += SyntaxMiddleTop
 		}
 	}
-	println(ts)
-	println(cs)
-	println(bs)
+	println(o.prefix + ts)
+	println(o.prefix + cs)
+	println(o.prefix + bs)
 }
 
 // Reset cell width.

@@ -254,7 +254,7 @@ func (o *command) listColumn(name string) error {
 		))
 	}
 	// print table.
-	table.Print()
+	table.SetPrefix("        ").Print()
 	return nil
 }
 
@@ -294,7 +294,7 @@ func (o *command) listTables() error {
 		))
 	}
 	// print table.
-	table.Print()
+	table.SetPrefix("        ").Print()
 	return nil
 }
 
