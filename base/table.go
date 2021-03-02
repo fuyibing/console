@@ -36,7 +36,7 @@ const (
 	ColorRed
 	ColorBlue
 	ColorGreen
-	ColorLine = 30
+	ColorLine  = 30
 	ColorTitle = 30
 )
 
@@ -96,6 +96,9 @@ func NewCell(value string) CellInterface {
 		} else {
 			o.width += 1
 		}
+	}
+	if o.width > 80 {
+		o.width = 80
 	}
 	return o
 }

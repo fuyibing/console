@@ -13,13 +13,14 @@ import (
 	"github.com/fuyibing/console/v2/s/consul/download"
 	"github.com/fuyibing/console/v2/s/consul/register"
 	"github.com/fuyibing/console/v2/s/consul/upload"
+	"github.com/fuyibing/console/v2/s/docs"
 	"github.com/fuyibing/console/v2/s/help"
 )
 
 // Return default console.
 func Default() i.IConsole {
 	c := New()
-	c.Add(help.New())
+	c.Add(help.New(), docs.New())
 	c.Add(path.New(), model.New(), service.New())
 	c.Add(download.New(), upload.New(), register.New(), deregister.New())
 	return c

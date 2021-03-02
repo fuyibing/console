@@ -38,6 +38,7 @@ func New() i.ICommand {
 
 // Print usage.
 func (o *command) Run(console i.IConsole) {
+
 	// Call command usage.
 	args := os.Args
 	if len(args) > 2 {
@@ -64,7 +65,6 @@ func (o *command) Run(console i.IConsole) {
 		}
 	}
 	console.PrintCommandItem(n, nil, true)
-
 	// Print ended.
 	console.PrintCommandMore(o)
 }
