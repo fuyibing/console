@@ -20,7 +20,7 @@ import (
 // Return default console.
 func Default() i.IConsole {
 	c := New()
-	c.Add(help.New(), docs.New())
+	c.Add(docs.New())
 	c.Add(path.New(), model.New(), service.New())
 	c.Add(download.New(), upload.New(), register.New(), deregister.New())
 	return c
@@ -28,5 +28,7 @@ func Default() i.IConsole {
 
 // Return new console.
 func New() i.IConsole {
-	return base.NewConsole()
+	o := base.NewConsole()
+	o.Add(help.New())
+	return o
 }

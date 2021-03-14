@@ -12,6 +12,7 @@ type ICommand interface {
 	IsDefault() bool
 	IsHidden() bool
 	Run(console IConsole)
+	SetHandler(func(IConsole))
 	Usage(console IConsole)
 	Validate(args []string) error
 }

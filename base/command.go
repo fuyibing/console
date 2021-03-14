@@ -14,15 +14,17 @@ import (
 
 // Command struct.
 type Command struct {
-	defaulter   bool                      // default status.
-	description string                    // command description
-	handler     func(iConsole i.IConsole) // command handler.
-	hidden      bool                      // hidden status, do not list in console
-	mu          *sync.RWMutex             // Mutex
-	name        string                    // command name
-	keys        []string                  //
-	opts        map[string]i.IOption      // command options
-	width       int
+	defaulter     bool                  // default status.
+	description   string                // command description
+	handler       func(i.IConsole)      // command handler.
+	handlerAfter  func(i.IConsole)      //
+	handlerBefore func(i.IConsole) bool //
+	hidden        bool                  // hidden status, do not list in console
+	mu            *sync.RWMutex         // Mutex
+	name          string                // command name
+	keys          []string              //
+	opts          map[string]i.IOption  // command options
+	width         int
 }
 
 // Add option to command.
@@ -90,7 +92,9 @@ func (o *Command) SetDefaulter(defaulter bool) { o.defaulter = defaulter }
 func (o *Command) SetDescription(description string) { o.description = description }
 
 // Set handler callback.
-func (o *Command) SetHandler(handler func(iConsole i.IConsole)) { o.handler = handler }
+func (o *Command) SetHandler(handler func(iConsole i.IConsole))            { o.handler = handler }
+func (o *Command) SetHandlerAfter(handler func(iConsole i.IConsole))       { o.handlerAfter = handler }
+func (o *Command) SetHandlerBefore(handler func(iConsole i.IConsole) bool) { o.handlerBefore = handler }
 
 // Set command hidden status.
 // Call in command new method, not export to interface.
@@ -101,8 +105,16 @@ func (o *Command) SetName(name string) { o.name = name }
 
 // Run command.
 func (o *Command) Run(console i.IConsole) {
+	if o.handlerBefore != nil {
+		if !o.handlerBefore(console) {
+			return
+		}
+	}
 	if o.handler != nil {
 		o.handler(console)
+		if o.handlerAfter != nil {
+			o.handlerAfter(console)
+		}
 		return
 	}
 	console.PrintError(errors.New(fmt.Sprintf("Command %s - Run() method not override", o.GetName())))
