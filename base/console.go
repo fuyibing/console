@@ -11,8 +11,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/fuyibing/log/v2"
-
 	"github.com/fuyibing/console/v2/i"
 )
 
@@ -266,7 +264,6 @@ func (o *console) Run(args ...string) {
 				o.PrintError(err)
 				return
 			}
-			log.Config.SetLevel("off")
 			cmd.Run(o)
 		} else {
 			// Print error if command name invalid.
