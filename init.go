@@ -3,3 +3,15 @@
 
 // Package console.
 package console
+
+import (
+	"regexp"
+)
+
+const (
+	PidFile = "pid"
+)
+
+var (
+	RegexpArgumentCommandName = regexp.MustCompile(`^([a-zA-Z][_a-zA-Z0-9-]*)`)
+)
