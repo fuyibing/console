@@ -24,6 +24,7 @@ func Default() *Console {
 		NewStart(),
 		NewStop(),
 		newBuildModelCommand(),
+		newBuildServiceCommand(),
 		newKvDownloadCommand(),
 	)
 }

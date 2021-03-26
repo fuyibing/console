@@ -5,4 +5,5 @@ main/
 tests/
 tmp/
 
+go.sum
 *.bak
