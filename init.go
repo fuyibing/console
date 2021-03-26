@@ -23,6 +23,7 @@ var (
 	RegexpFirstLetter         = regexp.MustCompile(`^([a-zA-Z])`)
 	RegexpUpperLetter         = regexp.MustCompile(`([A-Z])`)
 	RegexpColumnType          = regexp.MustCompile(`^([a-zA-Z0-9]+)`)
+	RegexpKvRecursion         = regexp.MustCompile(`kv://([/a-zA-Z0-9_-]+)`)
 )
 
 // Column.
