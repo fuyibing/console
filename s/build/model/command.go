@@ -318,7 +318,16 @@ func (o *command) toExportTag(col *build.BeanColumn) string {
 		str += "pk autoincr "
 	}
 	str += col.Field
-	return fmt.Sprintf("`xorm:\"%s\"`", str)
+	return fmt.Sprintf("`xorm:\"%s\" json:\"%s\"`", str, o.toExportJson(col.Field))
+}
+
+func (o *command) toExportJson(str string) string {
+	return regexpResetSnake.ReplaceAllStringFunc(str, func(s string) string {
+		if m := regexpResetSnake.FindStringSubmatch(s); len(m) == 2 {
+			return strings.ToUpper(m[1])
+		}
+		return s
+	})
 }
 
 // Convert to model field type.
