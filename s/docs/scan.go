@@ -5,7 +5,10 @@ package docs
 
 import (
     "bufio"
+    "encoding/json"
     "fmt"
+    "io/ioutil"
+    "net/http"
     "os"
     "os/exec"
     "regexp"
@@ -97,6 +100,7 @@ type (
         //
         // Save("/data/sketch/docs/api/README.md", `# Title`)
         Save(path, text string) error
+        SetUploadUrl(uploadUrl string) Scanner
 
         // Template
         // 模板参数替换.
@@ -113,7 +117,8 @@ type (
         module, host, port, domain, domainPrefix string
         description, title, version              string
 
-        payloads map[string]Payload
+        payloads  map[string]Payload
+        uploadUrl string
     }
 )
 
@@ -271,7 +276,20 @@ func (o *scanner) Save(path, text string) error {
     if _, err = f.WriteString(text); err != nil {
         return err
     }
+
+    // 4. 上传文件.
+    if regexp.MustCompile(`\.md$`).MatchString(path) && o.uploadUrl != "" {
+        if err = o.upload(path, text); err != nil {
+            println("upload: ", path, ", error: ", err.Error())
+        }
+    }
+
     return nil
+}
+
+func (o *scanner) SetUploadUrl(uploadUrl string) Scanner {
+    o.uploadUrl = uploadUrl
+    return o
 }
 
 // Template
@@ -565,7 +583,10 @@ func (o *scanner) render() error {
     // 4. 更新模板.
     path := fmt.Sprintf("%s%s/README.md", o.basePath, o.docsPath)
     text := o.Template(templateReadme, args)
-    return o.Save(path, text)
+    if err := o.Save(path, text); err != nil {
+        return err
+    }
+    return o.Save(fmt.Sprintf("%s%s/menu.md", o.basePath, o.docsPath), menu)
 }
 
 func (o *scanner) run() error {
@@ -584,6 +605,54 @@ func (o *scanner) run() error {
     // 3. 递归控制器文件.
     if o.directory, err = NewDirectory(o, ""); err != nil {
         return err
+    }
+
+    return nil
+}
+
+func (o *scanner) upload(path, content string) error {
+    var (
+        data = map[string]string{
+            "key":     o.module,
+            "name":    strings.TrimPrefix(path, fmt.Sprintf("%s%s/", o.basePath, o.docsPath)),
+            "content": content,
+        }
+        body, err = json.Marshal(data)
+        req       *http.Request
+        res       *http.Response
+    )
+
+    if err != nil {
+        return err
+    }
+
+    if req, err = http.NewRequest(http.MethodPut, o.uploadUrl, strings.NewReader(string(body))); err != nil {
+        return err
+    }
+
+    req.Header.Set("Content-Type", "application/json")
+    if res, err = (&http.Client{}).Do(req); err != nil {
+        return err
+    }
+
+    defer func() { _ = res.Body.Close() }()
+
+    var buf []byte
+    if buf, err = ioutil.ReadAll(res.Body); err != nil {
+        return err
+    }
+
+    v := &struct {
+        Errno int    `json:"errno"`
+        Error string `json:"error"`
+    }{}
+
+    if err = json.Unmarshal(buf, v); err != nil {
+        return err
+    }
+
+    if v.Errno != 0 {
+        return fmt.Errorf(v.Error)
     }
 
     return nil

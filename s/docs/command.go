@@ -34,6 +34,11 @@ func New() *command {
     o.SetHandlerBefore(o.before)
     o.SetHandler(o.run)
     o.SetHandlerAfter(o.after)
+
+    // consul addr.
+    //   -a 127.0.0.1:8500
+    //   --addr=127.0.0.1:8500
+    o.Add(base.NewOption(i.OptionalMode, i.StrValue).SetName("upload").SetShortName("u").SetDescription("upload markdown to specified server"))
     return o
 }
 
@@ -76,6 +81,13 @@ func (o *command) before(c i.IConsole) bool {
             c.PrintError(err)
             return false
         }
+
+        if g := o.GetOption("upload"); g != nil {
+            if s := g.ToString(); s != "" {
+                o.scanner.SetUploadUrl(s)
+            }
+        }
+
         return true
     }
 
