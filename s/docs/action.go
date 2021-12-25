@@ -134,6 +134,8 @@ func (o *action) SetVersion(s string) Action { o.version = s; return o }
 
 // 渲染模板.
 func (o *action) render() error {
+    // 源码.
+    // SourceFile & SourceLine.
     sf, sl := o.GetFile()
 
     // 变量.
@@ -164,9 +166,29 @@ func (o *action) render() error {
     }
 
     // 替换.
-    path := fmt.Sprintf("%s%s%s", o.controller.Scanner().GetBasePath(), o.controller.Scanner().GetDocsPath(), o.GetRouteLink())
     text := o.controller.Scanner().Template(templateAction, args)
-    return o.controller.Scanner().Save(path, text)
+
+    // 存储.
+    if o.controller.Scanner().IsSaveLocal() {
+        path := fmt.Sprintf(
+            "%s%s%s",
+            o.controller.Scanner().GetBasePath(),
+            o.controller.Scanner().GetDocsPath(),
+            o.GetRouteLink(),
+        )
+        if err := o.controller.Scanner().Save(path, text); err != nil {
+            return err
+        }
+    }
+
+    // 上传.
+    if uploadUrl := o.controller.Scanner().GetUploadUrl(); uploadUrl != "" {
+        if err := o.controller.Scanner().Upload(o.GetRouteLink(), text); err != nil {
+            return err
+        }
+    }
+
+    return nil
 }
 
 func (o *action) run() {

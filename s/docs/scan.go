@@ -81,6 +81,8 @@ type (
         // return "示例文档"
         GetTitle() string
 
+        GetUploadUrl() string
+
         // GetVersion
         // 读取版本号.
         //
@@ -91,6 +93,8 @@ type (
         // 是否递归目录.
         IsRecursion() bool
 
+        IsSaveLocal() bool
+
         // Markdown
         // 导出Markdown文件.
         Markdown() error
@@ -100,11 +104,32 @@ type (
         //
         // Save("/data/sketch/docs/api/README.md", `# Title`)
         Save(path, text string) error
+
+        // SetSaveLocal
+        // 本地存储.
+        //
+        // 生成的Markdown文件是否存储到本地.
+        //
+        // SetSaveLocal(true)
+        SetSaveLocal(local bool) Scanner
+
+        // SetUploadUrl
+        // 设置上传地址.
+        //
+        // 生成的Markdown上传到哪个位置.
+        //
+        // SaveUploadUrl(gs-docs.turboradio.cn)
         SetUploadUrl(uploadUrl string) Scanner
 
         // Template
         // 模板参数替换.
         Template(text string, args map[string]interface{}) string
+
+        // Upload
+        // 上传文件.
+        //
+        // .Upload("README.md", "# Title")
+        Upload(name, content string) error
     }
 
     // 扫描器结构体.
@@ -119,6 +144,7 @@ type (
 
         payloads  map[string]Payload
         uploadUrl string
+        saveLocal bool
     }
 )
 
@@ -168,8 +194,6 @@ func NewScan(basePath, controllerPath, docsPath string) (Scanner, error) {
     return o, nil
 }
 
-// AddPayload
-// 添加出入参文件路径.
 func (o *scanner) AddPayload(path string) (err error) {
     path = o.payloadKey(path)
     if m := regexp.MustCompile(`^(.+)\.([_a-zA-Z0-9]+)$`).FindStringSubmatch(path); len(m) == 3 {
@@ -190,8 +214,6 @@ func (o *scanner) AddPayload(path string) (err error) {
     return
 }
 
-// GetPayload
-// 读取出入参文件操作实例.
 func (o *scanner) GetPayload(path string) Payload {
     path = o.payloadKey(path)
     o.mu.RLock()
@@ -209,23 +231,18 @@ func (o *scanner) GetDocsPath() string                { return o.docsPath }
 func (o *scanner) GetDomain() (prefix, domain string) { return o.domainPrefix, o.domain }
 func (o *scanner) GetHost() (host, port string)       { return o.host, o.port }
 func (o *scanner) GetModule() string                  { return o.module }
+func (o *scanner) GetUploadUrl() string               { return o.uploadUrl }
 func (o *scanner) GetTitle() string                   { return o.title }
 func (o *scanner) GetVersion() string                 { return o.version }
 
 func (o *scanner) IsRecursion() bool { return o.recursion }
 
-// Markdown
-// 导出Markdown文件.
+func (o *scanner) IsSaveLocal() bool { return o.saveLocal }
+
 func (o *scanner) Markdown() error {
     var err error
 
-    // 1. 准备参数.
-    //    出参/入参.
-    if err = o.prepare(); err != nil {
-        return err
-    }
-
-    // 2. 导出README.md文件.
+    // 1. 导出README.md文件.
     if err = o.render(); err != nil {
         return err
     }
@@ -246,13 +263,18 @@ func (o *scanner) Markdown() error {
     return nil
 }
 
-// Save
-// 保存文件.
 func (o *scanner) Save(path, text string) error {
     var (
         err error
         m   []string
     )
+    defer func() {
+        if err != nil {
+            println("       fail saveto:", err.Error())
+        } else {
+            println("       saveto done:", strings.TrimPrefix(path, o.basePath))
+        }
+    }()
 
     // 1. 解析路径.
     //    路径名与文件名.
@@ -278,22 +300,23 @@ func (o *scanner) Save(path, text string) error {
     }
 
     // 4. 上传文件.
-    if regexp.MustCompile(`\.md$`).MatchString(path) && o.uploadUrl != "" {
-        if err = o.upload(path, text); err != nil {
-            println("upload: ", path, ", error: ", err.Error())
-        }
-    }
 
     return nil
 }
 
+func (o *scanner) SetSaveLocal(local bool) Scanner {
+    o.saveLocal = local
+    return o
+}
+
 func (o *scanner) SetUploadUrl(uploadUrl string) Scanner {
+    if !regexp.MustCompile(`^https*://`).MatchString(uploadUrl) {
+        uploadUrl = fmt.Sprintf("http://%s", uploadUrl)
+    }
     o.uploadUrl = uploadUrl
     return o
 }
 
-// Template
-// 模板参数替换.
 func (o *scanner) Template(text string, args map[string]interface{}) string {
     // 1. 追加变量.
     args["UPDATED"] = time.Now().Format("2006-01-02 15:04")
@@ -309,6 +332,63 @@ func (o *scanner) Template(text string, args map[string]interface{}) string {
     }), "·", "`")
 }
 
+func (o *scanner) Upload(name, content string) error {
+    var (
+        buf       []byte
+        data      = map[string]string{"key": o.module, "name": strings.TrimPrefix(name, "/"), "content": content}
+        body, err = json.Marshal(data)
+        req       *http.Request
+        res       *http.Response
+    )
+
+    // 1. 记录结果.
+    defer func() {
+        if err != nil {
+            println("       fail upload:", err.Error())
+        } else {
+            println("       upload done:", strings.TrimSuffix(o.uploadUrl, "/")+"/"+data["key"]+"/"+data["name"])
+        }
+    }()
+
+    // 2. 入参校验.
+    if err != nil {
+        return err
+    }
+
+    // 3. 上传请求.
+    if req, err = http.NewRequest(http.MethodPut, o.uploadUrl, strings.NewReader(string(body))); err != nil {
+        return err
+    }
+
+    // 4. 发送内容.
+    req.Header.Set("Content-Type", "application/json")
+    if res, err = (&http.Client{}).Do(req); err != nil {
+        return err
+    }
+    defer func() { _ = res.Body.Close() }()
+    if buf, err = ioutil.ReadAll(res.Body); err != nil {
+        return err
+    }
+
+    // 5. 发送结果.
+    v := &struct {
+        Errno int    `json:"errno"`
+        Error string `json:"error"`
+    }{}
+    if err = json.Unmarshal(buf, v); err != nil {
+        return err
+    }
+
+    // 6. 上传失败.
+    if v.Errno != 0 {
+        err = fmt.Errorf(v.Error)
+        return err
+    }
+
+    // 7. 完成上传.
+    return nil
+}
+
 func (o *scanner) clean() {
     path := fmt.Sprintf("%s%s/main", o.GetBasePath(), o.GetDocsPath())
     for _, p := range o.payloads {
@@ -317,7 +397,6 @@ func (o *scanner) clean() {
     os.Remove(fmt.Sprintf("%s/main.go", path))
 }
 
-// 基于payload生成临时文件.
 func (o *scanner) mainBuilder() error {
     // 基础目录.
     offset := 0
@@ -352,8 +431,6 @@ func (o *scanner) mainBuilder() error {
     return o.Save(path, text)
 }
 
-// fork子进程, 执行临时文件/docs/api/main/main.go, 生成
-// 出入参.
 func (o *scanner) mainExecute() error {
     // 1. 临时文件.
     //    docs/api/main/main.go.
@@ -498,10 +575,6 @@ func (o *scanner) payloadKey(s string) string {
     return s
 }
 
-func (o *scanner) prepare() error {
-    return nil
-}
-
 func (o *scanner) render() error {
     // 1. 基础变量.
     args := map[string]interface{}{
@@ -579,14 +652,30 @@ func (o *scanner) render() error {
     }
 
     args["MENU"] = menu
+    text := o.Template(templateReadme, args)
 
     // 4. 更新模板.
-    path := fmt.Sprintf("%s%s/README.md", o.basePath, o.docsPath)
-    text := o.Template(templateReadme, args)
-    if err := o.Save(path, text); err != nil {
-        return err
+    if o.saveLocal {
+        // Readme.
+        if err := o.Save(fmt.Sprintf("%s%s/README.md", o.basePath, o.docsPath), text); err != nil {
+            return err
+        }
+        // Menu.
+        if err := o.Save(fmt.Sprintf("%s%s/menu.md", o.basePath, o.docsPath), fmt.Sprintf("%v", args["MENU"])); err != nil {
+            return err
+        }
     }
-    return o.Save(fmt.Sprintf("%s%s/menu.md", o.basePath, o.docsPath), menu)
+
+    if o.uploadUrl != "" {
+        if err := o.Upload("README.md", text); err != nil {
+            return err
+        }
+        if err := o.Upload("menu.md", fmt.Sprintf("%v", args["MENU"])); err != nil {
+            return err
+        }
+    }
+
+    return nil
 }
 
 func (o *scanner) run() error {
@@ -605,54 +694,6 @@ func (o *scanner) run() error {
     // 3. 递归控制器文件.
     if o.directory, err = NewDirectory(o, ""); err != nil {
         return err
-    }
-
-    return nil
-}
-
-func (o *scanner) upload(path, content string) error {
-    var (
-        data = map[string]string{
-            "key":     o.module,
-            "name":    strings.TrimPrefix(path, fmt.Sprintf("%s%s/", o.basePath, o.docsPath)),
-            "content": content,
-        }
-        body, err = json.Marshal(data)
-        req       *http.Request
-        res       *http.Response
-    )
-
-    if err != nil {
-        return err
-    }
-
-    if req, err = http.NewRequest(http.MethodPut, o.uploadUrl, strings.NewReader(string(body))); err != nil {
-        return err
-    }
-
-    req.Header.Set("Content-Type", "application/json")
-    if res, err = (&http.Client{}).Do(req); err != nil {
-        return err
-    }
-
-    defer func() { _ = res.Body.Close() }()
-
-    var buf []byte
-    if buf, err = ioutil.ReadAll(res.Body); err != nil {
-        return err
-    }
-
-    v := &struct {
-        Errno int    `json:"errno"`
-        Error string `json:"error"`
-    }{}
-
-    if err = json.Unmarshal(buf, v); err != nil {
-        return err
-    }
-
-    if v.Errno != 0 {
-        return fmt.Errorf(v.Error)
     }
 
     return nil

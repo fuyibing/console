@@ -35,10 +35,15 @@ func New() *command {
     o.SetHandler(o.run)
     o.SetHandlerAfter(o.after)
 
-    // consul addr.
-    //   -a 127.0.0.1:8500
-    //   --addr=127.0.0.1:8500
+    // 上传地址.
+    // 生成的Markdown文件上传到哪里.
+    //   -u gs-docs.turboradio.cn
+    //   --upload=gs-docs.turboradio.cn
     o.Add(base.NewOption(i.OptionalMode, i.StrValue).SetName("upload").SetShortName("u").SetDescription("upload markdown to specified server"))
+
+    // 保存文件.
+    //   --parse
+    o.Add(base.NewOption(i.OptionalMode, i.BoolValue).SetName("save").SetDefaultValue("true").SetDescription("save markdown to local"))
     return o
 }
 
@@ -82,11 +87,19 @@ func (o *command) before(c i.IConsole) bool {
             return false
         }
 
+        // 上传位置.
         if g := o.GetOption("upload"); g != nil {
             if s := g.ToString(); s != "" {
                 o.scanner.SetUploadUrl(s)
             }
         }
+
+        // 本地存储.
+        sl := true
+        if g := o.GetOption("save"); g != nil {
+            sl = g.ToBool()
+        }
+        o.scanner.SetSaveLocal(sl)
 
         return true
     }
@@ -98,9 +111,17 @@ func (o *command) before(c i.IConsole) bool {
 
 // 过程.
 func (o *command) run(c i.IConsole) {
+    c.Info("[docs] export markdown documents.")
+    c.Info("       module: %s", o.scanner.GetModule())
+    c.Info("       ---- ---- ---- ---- ---- ---- ---- ----")
+
+    // 导出过程.
     if err := o.scanner.Markdown(); err != nil {
         c.PrintError(err)
         return
     }
-    c.Info("document exported to: %s", o.scanner.GetDocsPath())
+
+    // 结束导出.
+    c.Info("       ---- ---- ---- ---- ---- ---- ---- ----")
+    c.Info("[docs] end export.")
 }
