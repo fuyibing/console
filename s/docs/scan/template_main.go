@@ -9,7 +9,7 @@ import (
     "fmt"
     "reflect"
 
-    "gsjob/tests/ref"
+    "github.com/fuyibing/console/v2/s/docs/ref"
 {{IMPORTS}}
 )
 
