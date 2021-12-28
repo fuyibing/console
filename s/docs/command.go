@@ -4,8 +4,9 @@
 package docs
 
 import (
-    "fmt"
-    "os"
+    "path/filepath"
+
+    "github.com/fuyibing/console/v2/s/docs/scan"
 
     "github.com/fuyibing/console/v2/base"
     "github.com/fuyibing/console/v2/i"
@@ -21,107 +22,154 @@ type command struct {
     base.Command
 
     basePath, controllerPath, docsPath string
-    scanner                            Scanner
+    clean, saveEnable, uploadEnable    bool
+    scanner                            scan.Scanner
+    uploadUrl                          string
 }
 
 // 构造导出文档实例.
 func New() *command {
-    o := &command{basePath: ".", controllerPath: "/app/controllers", docsPath: "/docs/api"}
+    // 1. 构建实例.
+    o := &command{clean: true}
+    o.basePath = "./"
+    o.controllerPath = "/app/controllers"
+    o.docsPath = "/docs/api"
+    o.saveEnable = true
+    o.uploadEnable = false
+    o.uploadUrl = "http://gs-docs.turboradio.cn"
+
+    // 2. 初始化.
     o.Initialize()
     o.SetName(Name)
     o.SetDescription(Description)
-    // 执行过程.
+
+    // 3. 执行过程.
     o.SetHandlerBefore(o.before)
     o.SetHandler(o.run)
     o.SetHandlerAfter(o.after)
 
-    // 上传地址.
-    // 生成的Markdown文件上传到哪里.
-    //   -u gs-docs.turboradio.cn
-    //   --upload=gs-docs.turboradio.cn
-    o.Add(base.NewOption(i.OptionalMode, i.StrValue).SetName("upload").SetShortName("u").SetDescription("upload markdown to specified server"))
+    // 4. 路径定义
+    o.Add(base.NewOption(i.OptionalMode, i.StrValue).
+        SetName("base-path").
+        SetDefaultValue("./").
+        SetDescription("application base path"),
+    )
+    o.Add(base.NewOption(i.OptionalMode, i.StrValue).
+        SetName("controller-path").
+        SetDefaultValue("/app/controllers").
+        SetDescription("controller path of application"))
+    o.Add(base.NewOption(i.OptionalMode, i.StrValue).
+        SetName("docs-path").
+        SetDefaultValue("/docs/api").
+        SetDescription("documents path of application"))
 
-    // 保存文件.
-    //   --parse
-    o.Add(base.NewOption(i.OptionalMode, i.BoolValue).SetName("save").SetDefaultValue("true").SetDescription("save markdown to local"))
+    // 5. 存储状态.
+    o.Add(base.NewOption(i.OptionalMode, i.BoolValue).
+        SetName("save").
+        SetShortName("s").
+        SetDefaultValue("true").
+        SetDescription("save to documents path or not, default: true"),
+    )
+
+    // 6. 上传状态.
+    o.Add(base.NewOption(i.OptionalMode, i.BoolValue).
+        SetName("upload").
+        SetShortName("u").
+        SetDescription("upload to server or not, default: false"),
+    )
+
+    // 8. 上传位置.
+    o.Add(base.NewOption(i.OptionalMode, i.StrValue).
+        SetName("upload-url").
+        SetDefaultValue("gs-docs.turboradio.cn").
+        SetDescription("where documents storage"),
+    )
+
+    // 7. 完成配置.
     return o
 }
 
 // 后置.
-func (o *command) after(c i.IConsole) {}
+func (o *command) after(c i.IConsole) {
+    if o.clean {
+        o.scanner.Clean()
+    }
+}
 
 // 前置.
 func (o *command) before(c i.IConsole) bool {
-    // 1. 根目录.
+    // 1. 项目目录.
     if g := o.GetOption("base-path"); g != nil {
         if s := g.ToString(); s != "" {
             o.basePath = s
         }
     }
 
-    // 2. 控制器文件目录.
+    // 2. 控制器目录.
     if g := o.GetOption("controller-path"); g != nil {
         if s := g.ToString(); s != "" {
             o.controllerPath = s
         }
     }
 
-    // 3. 文档(Markdown)存储目录.
+    // 3. 文档目录.
     if g := o.GetOption("docs-path"); g != nil {
         if s := g.ToString(); s != "" {
             o.docsPath = s
         }
     }
 
-    // 4. 校验目录.
-    stat, err := os.Stat(o.basePath + o.controllerPath)
-    if err != nil {
-        c.PrintError(err)
-        return false
+    // 4. 是否存储.
+    if g := o.GetOption("save"); g != nil {
+        o.saveEnable = g.ToBool()
     }
 
-    // 5. 合法目录.
-    if stat.IsDir() {
-        if o.scanner, err = NewScan(o.basePath, o.controllerPath, o.docsPath); err != nil {
-            c.PrintError(err)
-            return false
-        }
-
-        // 上传位置.
-        if g := o.GetOption("upload"); g != nil {
-            if s := g.ToString(); s != "" {
-                o.scanner.SetUploadUrl(s)
-            }
-        }
-
-        // 本地存储.
-        sl := true
-        if g := o.GetOption("save"); g != nil {
-            sl = g.ToBool()
-        }
-        o.scanner.SetSaveLocal(sl)
-
-        return true
+    // 5. 是否上传.
+    if g := o.GetOption("upload"); g != nil {
+        o.uploadEnable = g.ToBool()
     }
 
-    // 6. 无效目录.
-    c.PrintError(fmt.Errorf("invalid controller path: %s", o.controllerPath))
-    return false
+    // 6. 上传位置.
+    if g := o.GetOption("upload-url"); g != nil {
+        if s := g.ToString(); s != "" {
+            o.uploadUrl = s
+        }
+    }
+
+    // 7. 完成.
+    if o.basePath == "" || o.basePath == "." || o.basePath == "./" {
+        if s, err := filepath.Abs("./"); err == nil {
+            o.basePath = s
+        }
+    }
+    return true
 }
 
 // 过程.
 func (o *command) run(c i.IConsole) {
-    c.Info("[docs] export markdown documents.")
-    c.Info("       module: %s", o.scanner.GetModule())
-    c.Info("       ---- ---- ---- ---- ---- ---- ---- ----")
+    // 1. 准备执行.
+    o.scanner = scan.NewScanner()
+    o.scanner.SetBasePath(o.basePath).SetControllerPath(o.controllerPath).SetDocsPath(o.docsPath)
+    o.scanner.SetSaveEnable(o.saveEnable).SetUploadEnable(o.uploadEnable).SetUploadUrl(o.uploadUrl)
 
-    // 导出过程.
-    if err := o.scanner.Markdown(); err != nil {
+    // 2. 扫描目录.
+    if err := o.scanner.Run(); err != nil {
+        o.clean = false
         c.PrintError(err)
         return
     }
 
-    // 结束导出.
+    // 3. 导出过程.
+    c.Info("[docs] export markdown documents.")
+    c.Info("       module: %s", o.scanner.GetModule())
+    c.Info("       ---- ---- ---- ---- ---- ---- ---- ----")
+    if err := o.scanner.Markdown(); err != nil {
+        o.clean = false
+        c.PrintError(err)
+        return
+    }
+
+    // 4. 结束导出.
     c.Info("       ---- ---- ---- ---- ---- ---- ---- ----")
     c.Info("[docs] end export.")
 }

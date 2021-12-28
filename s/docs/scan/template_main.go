@@ -1,14 +1,15 @@
 // author: wsfuyibing <websearch@163.com>
 // date: 2021-12-16
 
-package docs
+package scan
 
 var templateMain = `package main
 
 import (
     "fmt"
+    "reflect"
 
-    "github.com/fuyibing/console/v2/s/docs"
+    "gsjob/tests/ref"
 {{IMPORTS}}
 )
 
@@ -26,9 +27,11 @@ func main() {
     }
 
     for k, v := range m {
-        if err := docs.NewX(b, k, v).Markdown(); err != nil {
-            println(err.Error())
-            break
+        p := ref.NewBlock(0)
+        if err := p.Run(reflect.ValueOf(v)); err == nil {
+            if err = p.Markdown(b, k); err != nil {
+                break
+            }
         }
     }
 }
