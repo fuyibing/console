@@ -255,8 +255,8 @@ func (o *action) render() (text string, err error) {
 
     // m. 结尾.
     text += fmt.Sprintf("--------\n\n")
-    text += fmt.Sprintf("**入口** : ·%s·.·%s·()<br />\n", o.controller.GetName(), o.name)
-    text += fmt.Sprintf("**源码** : ·%s%s· : ·%d·<br />\n", o.controller.GetScanner().GetControllerPath(), o.sourcePath, o.sourceLine)
+    text += fmt.Sprintf("**入口** : ·%s·.·%s()·<br />\n", o.controller.GetName(), o.name)
+    text += fmt.Sprintf("**源码** : ·%s%s: %d·<br />\n", o.controller.GetScanner().GetControllerPath(), o.sourcePath, o.sourceLine)
     text += fmt.Sprintf("**更新** : ·%s·\n", time.Now().Format("2006-01-02 15:04"))
 
     // n. 完成.
