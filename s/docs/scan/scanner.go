@@ -137,9 +137,9 @@ func (o *scanner) Save(path, text string) error {
 
     defer func() {
         if err != nil {
-            println("       fail saveto:", err.Error())
+            println("       saveto error:", err.Error())
         } else {
-            println("       saveto done:", src)
+            println("       saveto [", src, "]")
         }
     }()
 
@@ -229,7 +229,7 @@ func (o *scanner) Upload(name, content string) error {
     // 1. 记录结果.
     defer func() {
         if err != nil {
-            println("       fail upload:", err.Error())
+            println("       upload error:", err.Error())
         } else {
             route := regexp.MustCompile(`/([_a-zA-Z0-9]+).md$`).ReplaceAllString(data["name"], "")
             target := strings.TrimSuffix(o.uploadUrl, "/") + "/" + data["key"] + "/" + data["name"]
@@ -459,7 +459,6 @@ func (o *scanner) renderReadme() error {
 
 // 执行扫描.
 func (o *scanner) run() error {
-    println("run scanner: ")
     // 1. 读取模块.
     buf, err := os.ReadFile(fmt.Sprintf("%s/go.mod", o.basePath))
     if err != nil {
