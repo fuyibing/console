@@ -157,7 +157,7 @@ func (o *commentBlock) is(ct CommentType) bool {
 // 是否注解.
 func (o *commentBlock) isAnnotation(line string) bool {
     b := false
-    r := regexp.MustCompile(`^\s*@\s*([_a-zA-Z0-9]+)\s*\(([^)]*)\)`)
+    r := regexp.MustCompile(`^\s?@\s*([_a-zA-Z0-9]+)\s*\(([^)]*)\)`)
     if m := r.FindStringSubmatch(line); len(m) > 0 {
         b = true
         k, v := strings.ToLower(m[1]), strings.TrimSpace(m[2])
@@ -204,10 +204,15 @@ func (o *commentBlock) isCode(line string) bool {
 
 // 是否注释.
 func (o *commentBlock) isQuote(line string) {
+    // 1. 重置实例
+    //    若最后1次的实例, 非BlockQuote则重置(断开)
     if o.last != nil && !o.last.Is(CommentTypeQuote) {
         o.last = nil
     }
 
+    // 2. 创建实例
+    //    若无最后的BlockQuote实例则创建, 若首次出现则用于
+    //    标题
     if o.last == nil {
         o.last = NewCommentQuote(o)
         if o.first == nil {
@@ -217,8 +222,12 @@ func (o *commentBlock) isQuote(line string) {
         }
     }
 
+    // 3. 加入列表
     line = strings.TrimSpace(line)
     o.last.Add(line)
+
+    // 4. 去除句号
+    //    去除末尾的英文句号
     if regexp.MustCompile(`[.]+$`).MatchString(line) {
         o.last = nil
     }
@@ -230,6 +239,5 @@ func (o *commentBlock) markdown() string {
     for _, c := range o.comments {
         cs = append(cs, c.Markdown())
     }
-
     return strings.Join(cs, "\n\n")
 }

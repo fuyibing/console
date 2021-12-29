@@ -6,6 +6,7 @@ package scan
 import (
     "fmt"
     "regexp"
+    "strconv"
     "strings"
 )
 
@@ -55,11 +56,31 @@ func (o *commentQuote) is(ct CommentType) bool {
 // 注释内容.
 //
 //   return "> Message"
-func (o *commentQuote) markdown() string {
-    if len(o.lines) > 0 {
-        return fmt.Sprintf("> %s.", strings.Join(o.lines, ""))
+func (o *commentQuote) markdown() (str string) {
+
+    op := false
+    re := regexp.MustCompile(`^\s*#(\d)`)
+    for _, s := range o.lines {
+        if m := re.FindStringSubmatch(s); len(m) > 0 {
+            // 输出:
+            // ##### #5 Message.
+            op = false
+            tn, _ := strconv.ParseInt(m[1], 10, 32)
+            str += fmt.Sprintf(
+                "%s %s\n\n",
+                strings.Repeat("#", int(tn)),
+                re.ReplaceAllString(s, ""),
+            )
+        } else {
+            if !op {
+                op = true
+                str += "> "
+            }
+            str += s
+        }
     }
-    return ""
+
+    return
 }
 
 func (o *commentQuote) title() string {
