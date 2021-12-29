@@ -75,6 +75,7 @@ type (
 func NewAction(controller Controller, name string) Action {
     o := &action{controller: controller, name: name}
     o.ignore = false
+    o.title = name
     o.version = "0.0"
     o.init()
     return o
