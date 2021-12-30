@@ -82,6 +82,9 @@ func (o *block) Markdown(basePath, sourcePath string) error {
     }
 
     // 4. 保存.
+    if err := o.save(req, cs, basePath, sourcePath, "0"); err != nil {
+        return err
+    }
     if err := o.save(req, cs, basePath, sourcePath, "1"); err != nil {
         return err
     }
@@ -188,22 +191,31 @@ func (o *block) save(table []string, code map[string]interface{}, basePath, sour
             ) + "." + suffix,
         ), fmt.Sprintf(
             "%s/.md", basePath,
-        ), strings.Join(
-            table,
-            "\n",
-        )
+        ), ""
     )
 
-    // 1.1 代码片段.
-    if len(code) > 0 {
+    // 2. 内容.
+    if suffix == "0" {
+        // JSON.
+        // 用于在Postman中的出入参.
         buf, err := json.MarshalIndent(code, "", "    ")
         if err != nil {
             return err
         }
-        text += "\n\n**Example**:\n\n"
-        text += "```json\n"
-        text += string(buf) + "\n"
-        text += "```"
+        text = string(buf)
+    } else {
+        text += strings.Join(table, "\n")
+        // 1.1 代码片段.
+        if len(code) > 0 {
+            buf, err := json.MarshalIndent(code, "", "    ")
+            if err != nil {
+                return err
+            }
+            text += "\n\n**Example**:\n\n"
+            text += "```json\n"
+            text += string(buf) + "\n"
+            text += "```"
+        }
     }
 
     // 2. 目录.

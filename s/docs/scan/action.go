@@ -41,6 +41,10 @@ type (
         // 导出Markdown文档.
         Markdown() error
 
+        // Postman
+        // 导出POSTMAN接口.
+        Postman() interface{}
+
         // SetCommentBlock
         // 设置注释实例.
         SetCommentBlock(cb CommentBlock) Action
@@ -141,6 +145,119 @@ func (o *action) Markdown() (err error) {
     return
 }
 
+func (o *action) Postman() interface{} {
+    var (
+        request = map[string]interface{}{
+            "method": o.GetMethod(),
+            "url": map[string]interface{}{
+                "raw":  fmt.Sprintf(`{{protocol}}://%s.{{domain}}%s`, o.controller.GetScanner().GetDomainPrefix(), o.GetRoute()),
+                "host": []string{o.controller.GetScanner().GetDomainPrefix(), "{{domain}}"},
+                "path": strings.Split(strings.TrimPrefix(o.GetRoute(), "/"), "/"),
+            },
+        }
+        response = make([]interface{}, 0)
+    )
+
+    // 入参.
+    if o.request != "" {
+        if x := o.controller.GetScanner().GetPayload(o.request); x != nil {
+            if s := x.Postman(); s != "" {
+                request["body"] = map[string]interface{}{
+                    "mode": "raw", "raw": s, "options": map[string]interface{}{
+                        "raw": map[string]interface{}{
+                            "language": "json",
+                        },
+                    },
+                }
+            }
+        }
+    }
+
+    // 出参.
+    if o.request != "" {
+        if x := o.controller.GetScanner().GetPayload(o.response); x != nil {
+            if s := x.Postman(); s != "" {
+                response = append(response, map[string]interface{}{
+                    "name":   "Result",
+                    "body":   s,
+                    "status": 200,
+                })
+            }
+        }
+    }
+
+    // n. 结果.
+    return map[string]interface{}{
+        "name":        o.GetTitle(),
+        "description": o.description,
+        "request":     request,
+        "response":    response,
+    }
+}
+
+func (o *action) Postman2() interface{} {
+    // 入参.
+    request := make(map[string]interface{})
+    if o.request != "" {
+        if x := o.controller.GetScanner().GetPayload(o.request); x != nil {
+            if s := x.Postman(); s != "" {
+                request = map[string]interface{}{
+                    "mode": "raw", "raw": s, "options": map[string]interface{}{
+                        "raw": map[string]interface{}{
+                            "language": "json",
+                        },
+                    },
+                }
+            }
+        }
+    }
+
+    // 出参.
+    response := make(map[string]interface{})
+    if o.request != "" {
+        if x := o.controller.GetScanner().GetPayload(o.response); x != nil {
+            if s := x.Postman(); s != "" {
+                response = map[string]interface{}{
+                    "name":     "Example",
+                    "header":   map[string][]interface{}{"Content-Type": {"application/json"}},
+                    "body":     s,
+                    "status":   200,
+                    "language": "json",
+                }
+            }
+        }
+    }
+
+    // 结果.
+    x := map[string]interface{}{
+        "name": o.GetTitle(),
+        "request": map[string]interface{}{
+            "method": o.GetMethod(),
+            "header": make([]interface{}, 0),
+            "body":   request,
+            "url": map[string]interface{}{
+                "raw": fmt.Sprintf(
+                    `{{protocol}}://%s.{{domain}}%s`,
+                    o.controller.GetScanner().GetDomainPrefix(),
+                    o.GetRoute(),
+                ),
+                "host": []string{
+                    o.controller.GetScanner().GetDomainPrefix(),
+                    "{{domain}}",
+                },
+                "path": strings.Split(strings.TrimPrefix(o.GetRoute(), "/"), "/"),
+            },
+        },
+        "response": []interface{}{response},
+    }
+
+    if response != nil {
+
+    }
+
+    return x
+}
+
 func (o *action) SetCommentBlock(cb CommentBlock) Action {
     // 1. 标题.
     if ti := cb.GetTitle(); ti != "" {
@@ -228,6 +345,7 @@ func (o *action) render() (text string, err error) {
 
     // 2. 参数.
     text += fmt.Sprintf("**路由** : ·%s %s·", o.GetMethod(), o.GetRoute()) + "<br />\n"
+    text += fmt.Sprintf("**域名** : ·%s.%s·", o.controller.GetScanner().GetDomainPrefix(), o.controller.GetScanner().GetDomain()) + "<br />\n"
     text += fmt.Sprintf("**版本** : ·%s·", o.version) + "<br />\n"
     text += "\n"
 

@@ -26,6 +26,8 @@ type (
         GetBasePath() string
         GetController(key string) Controller
         GetControllerPath() string
+        GetDomain() string
+        GetDomainPrefix() string
         GetDocsPath() string
         GetModule() string
         GetPayload(path string) Payload
@@ -120,6 +122,8 @@ func (o *scanner) GetController(key string) Controller {
 }
 func (o *scanner) GetControllerPath() string { return o.controllerPath }
 func (o *scanner) GetDocsPath() string       { return o.docsPath }
+func (o *scanner) GetDomain() string         { return o.docDomain }
+func (o *scanner) GetDomainPrefix() string   { return o.docDomainPrefix }
 func (o *scanner) GetModule() string         { return o.module }
 func (o *scanner) IsRecursion() bool         { return o.recursion }
 func (o *scanner) IsSaveEnable() bool        { return o.saveEnable }
@@ -330,9 +334,13 @@ func (o *scanner) markdown() error {
         return err
     }
 
-    // 4. 文档明细.
+    // 4. Postman JSON.
+    if err := o.renderPostman(); err != nil {
+        return err
+    }
+
+    // 5. 文档明细.
     return o.renderActions()
-    // return nil
 }
 
 func (o *scanner) renderActions() (err error) {
@@ -342,6 +350,73 @@ func (o *scanner) renderActions() (err error) {
         }
     })
     return
+}
+
+// 导出JSON.
+//
+// 导出应用于Markdown文件的JSON文件.
+func (o *scanner) renderPostman() error {
+    // 1. 准备数据.
+    cs := make([]string, 0)
+    cm := make(map[string]Controller)
+    pc := make([]interface{}, 0)
+
+    // 2. 控制器排序.
+    o.eachController(func(c Controller) {
+        ck := c.GetTitle()
+        cs = append(cs, ck)
+        cm[ck] = c
+    })
+
+    // 4. 遍历控制器.
+    //    按名称顺序排列.
+    sort.Strings(cs)
+    for _, ck := range cs {
+        if c, ok := cm[ck]; ok {
+            // 2.1 API列表
+            as := make([]string, 0)
+            am := make(map[string]Action)
+            c.Each(func(a Action) {
+                ak := a.GetRouteLink()
+                as = append(as, ak)
+                am[ak] = a
+            })
+            if len(as) == 0 {
+                continue
+            }
+
+            // 2.2 遍历API.
+            //     按URI顺序排列.
+            ps := make([]interface{}, 0)
+            for _, ak := range as {
+                if a, ao := am[ak]; ao {
+                    ps = append(ps, a.Postman())
+                }
+            }
+            pc = append(pc, map[string]interface{}{
+                "name": c.GetTitle(),
+                "item": ps,
+            })
+        }
+    }
+
+    // n. 写入文件.
+    buf, err := json.MarshalIndent(
+        map[string]interface{}{
+            "info": map[string]string{
+                "name":        o.docTitle,
+                "description": o.docDescription,
+                "schema":      "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+            },
+            "item": pc,
+        },
+        "",
+        "    ",
+    )
+    if err != nil {
+        return err
+    }
+    return o.Save(fmt.Sprintf("%s/postman.json", o.docsPath), string(buf))
 }
 
 // 渲染菜单.

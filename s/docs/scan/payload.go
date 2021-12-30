@@ -17,6 +17,7 @@ type (
         GetPkg() string
 
         Markdown(resp bool) string
+        Postman() string
     }
 
     payload struct {
@@ -52,6 +53,27 @@ func (o *payload) Markdown(resp bool) string {
                 "/",
                 "-",
             ) + "." + suffix,
+        ), fmt.Sprintf("%s%s/main/.md",
+            o.scanner.GetBasePath(),
+            o.scanner.GetDocsPath(),
+        )
+    )
+
+    src := fmt.Sprintf("%s/%s", path, name)
+    if buf, err := os.ReadFile(src); err == nil {
+        return strings.TrimSpace(string(buf))
+    }
+    return ""
+}
+
+func (o *payload) Postman() string {
+    var (
+        name, path = strings.ToLower(
+            strings.ReplaceAll(
+                strings.TrimPrefix(o.path, "/"),
+                "/",
+                "-",
+            ) + ".0",
         ), fmt.Sprintf("%s%s/main/.md",
             o.scanner.GetBasePath(),
             o.scanner.GetDocsPath(),
