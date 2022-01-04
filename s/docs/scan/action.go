@@ -4,11 +4,21 @@
 package scan
 
 import (
+    "encoding/json"
     "fmt"
     "regexp"
+    "sort"
     "strconv"
     "strings"
     "time"
+)
+
+const (
+    _ = iota
+    ResponseError
+    ResponseData
+    ResponseList
+    ResponsePaging
 )
 
 type (
@@ -70,7 +80,8 @@ type (
 
         description, title, version string
         ignore                      bool
-        request, response, sdk      string
+        request, sdk                string
+        responses                   map[int]string
     }
 )
 
@@ -78,6 +89,7 @@ type (
 // 构造API接口实例.
 func NewAction(controller Controller, name string) Action {
     o := &action{controller: controller, name: name}
+    o.responses = make(map[int]string)
     o.ignore = false
     o.title = name
     o.version = "0.0"
@@ -174,14 +186,64 @@ func (o *action) Postman() interface{} {
     }
 
     // 出参.
-    if o.request != "" {
-        if x := o.controller.GetScanner().GetPayload(o.response); x != nil {
-            if s := x.Postman(); s != "" {
-                response = append(response, map[string]interface{}{
-                    "name":   "Result",
-                    "body":   s,
-                    "status": 200,
-                })
+    if len(o.responses) > 0 {
+        // Integer list.
+        ns := make([]int, 0)
+        for n, _ := range o.responses {
+            ns = append(ns, n)
+        }
+        sort.Ints(ns)
+
+        // Each integer.
+        for _, n := range ns {
+            if v, ok := o.responses[n]; ok {
+                if x := o.controller.GetScanner().GetPayload(v); x != nil {
+                    if s := x.Postman(); s != "" {
+                        var (
+                            cv  interface{}
+                            cvd WithResponse
+                            cvz = true
+                        )
+                        if ce := json.Unmarshal([]byte(s), &cv); ce == nil {
+                            if n == ResponseList {
+                                cvd = With.List([]interface{}{cv})
+                            } else if n == ResponseData {
+                                cvd = With.Data(cv)
+                            } else if n == ResponsePaging {
+                                cvd = With.Paging(cv, 1, 1, 10)
+                            } else if n == ResponseError {
+                                cvd = With.Error(fmt.Errorf("error message"))
+                            } else {
+                                cvz = false
+                            }
+                            if cvz {
+
+
+
+                                if cvb, cve := json.MarshalIndent(cvd, "", "    "); cve == nil {
+                                    // text += fmt.Sprintf("**Example**: \n\n```\n%s\n```\n\n", cvb)
+
+                                    response = append(response, map[string]interface{}{
+                                        "name":   "Result",
+                                        "body":   string(cvb),
+                                        "status": 200,
+                                    })
+                                }
+                            }
+                        }
+
+
+
+
+
+
+                        // response = append(response, map[string]interface{}{
+                        //     "name":   "Result",
+                        //     "body":   s,
+                        //     "status": 200,
+                        // })
+                    }
+                }
             }
         }
     }
@@ -193,69 +255,6 @@ func (o *action) Postman() interface{} {
         "request":     request,
         "response":    response,
     }
-}
-
-func (o *action) Postman2() interface{} {
-    // 入参.
-    request := make(map[string]interface{})
-    if o.request != "" {
-        if x := o.controller.GetScanner().GetPayload(o.request); x != nil {
-            if s := x.Postman(); s != "" {
-                request = map[string]interface{}{
-                    "mode": "raw", "raw": s, "options": map[string]interface{}{
-                        "raw": map[string]interface{}{
-                            "language": "json",
-                        },
-                    },
-                }
-            }
-        }
-    }
-
-    // 出参.
-    response := make(map[string]interface{})
-    if o.request != "" {
-        if x := o.controller.GetScanner().GetPayload(o.response); x != nil {
-            if s := x.Postman(); s != "" {
-                response = map[string]interface{}{
-                    "name":     "Example",
-                    "header":   map[string][]interface{}{"Content-Type": {"application/json"}},
-                    "body":     s,
-                    "status":   200,
-                    "language": "json",
-                }
-            }
-        }
-    }
-
-    // 结果.
-    x := map[string]interface{}{
-        "name": o.GetTitle(),
-        "request": map[string]interface{}{
-            "method": o.GetMethod(),
-            "header": make([]interface{}, 0),
-            "body":   request,
-            "url": map[string]interface{}{
-                "raw": fmt.Sprintf(
-                    `{{protocol}}://%s.{{domain}}%s`,
-                    o.controller.GetScanner().GetDomainPrefix(),
-                    o.GetRoute(),
-                ),
-                "host": []string{
-                    o.controller.GetScanner().GetDomainPrefix(),
-                    "{{domain}}",
-                },
-                "path": strings.Split(strings.TrimPrefix(o.GetRoute(), "/"), "/"),
-            },
-        },
-        "response": []interface{}{response},
-    }
-
-    if response != nil {
-
-    }
-
-    return x
 }
 
 func (o *action) SetCommentBlock(cb CommentBlock) Action {
@@ -287,11 +286,28 @@ func (o *action) SetCommentBlock(cb CommentBlock) Action {
                     o.controller.GetScanner().AddPayload(vs[0])
                 }
             }
-        case "response", "output":
+        case "response", "responseerror", "responselist", "responsepaging", "output":
             {
-                if len(vs) > 0 {
-                    o.response = vs[0]
-                    o.controller.GetScanner().AddPayload(vs[0])
+
+                for _, s := range vs {
+                    if s = strings.TrimSpace(s); s == "" {
+                        continue
+                    }
+
+                    n := ResponseData
+                    if k == "responseerror" {
+                        n = ResponseError
+                    } else if k == "responselist" {
+                        n = ResponseList
+                    } else if k == "responsepaging" {
+                        n = ResponsePaging
+                    } else {
+                        n = -1
+                    }
+                    if n >= 0 {
+                        o.responses[n] = s
+                        o.controller.GetScanner().AddPayload(s)
+                    }
                 }
             }
         case "sdk":
@@ -359,15 +375,56 @@ func (o *action) render() (text string, err error) {
         if x := o.controller.GetScanner().GetPayload(o.request); x != nil {
             if s := x.Markdown(false); s != "" {
                 text += fmt.Sprintf("### 入参\n\n%s\n\n", s)
+                if c := x.Postman(); c != "" {
+                    text += fmt.Sprintf("**Example**: \n\n```json\n%s\n```\n\n", c)
+                }
             }
         }
     }
 
     // 5. 出参.
-    if o.response != "" {
-        if x := o.controller.GetScanner().GetPayload(o.response); x != nil {
-            if s := x.Markdown(true); s != "" {
-                text += fmt.Sprintf("### 出参\n\n%s\n\n", s)
+    if len(o.responses) > 0 {
+        // Integer list.
+        ns := make([]int, 0)
+        for n, _ := range o.responses {
+            ns = append(ns, n)
+            println("response: ", n)
+        }
+        sort.Ints(ns)
+
+        // Each integer.
+        for i, n := range ns {
+            if v, ok := o.responses[n]; ok {
+                if x := o.controller.GetScanner().GetPayload(v); x != nil {
+                    if s := x.Markdown(true); s != "" {
+                        text += fmt.Sprintf("### 出参 %d\n\n%s\n\n", i+1, s)
+                        if c := x.Postman(); c != "" {
+                            var (
+                                cv  interface{}
+                                cvd WithResponse
+                                cvz = true
+                            )
+                            if ce := json.Unmarshal([]byte(c), &cv); ce == nil {
+                                if n == ResponseList {
+                                    cvd = With.List([]interface{}{cv})
+                                } else if n == ResponseData {
+                                    cvd = With.Data(cv)
+                                } else if n == ResponsePaging {
+                                    cvd = With.Paging(cv, 1, 1, 10)
+                                } else if n == ResponseError {
+                                    cvd = With.Error(fmt.Errorf("error message"))
+                                } else {
+                                    cvz = false
+                                }
+                                if cvz {
+                                    if cvb, cve := json.MarshalIndent(cvd, "", "    "); cve == nil {
+                                        text += fmt.Sprintf("**Example**: \n\n```\n%s\n```\n\n", cvb)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }

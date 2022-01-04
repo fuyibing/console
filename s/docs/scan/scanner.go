@@ -47,10 +47,42 @@ type (
         SetCommentBlock(cb CommentBlock) Scanner
         SetControllerPath(controllerPath string) Scanner
         SetDocsPath(docsPath string) Scanner
+
+        // SetRecursion
+        // 设置递归开关.
+        //
+        // 当打开时, 扫描Controller目录时检查子目录. 默认: true (即开启).
         SetRecursion(b bool) Scanner
+
+        // SetSaveEnable
+        // 设置存储开关.
+        //
+        // 当打开时, 存储到本地文件中, 反之不存储. 默认: true, 即存储.
+        //
+        //   go run main.go docs --save=true
+        //   go run main.go docs --save=false
         SetSaveEnable(b bool) Scanner
+
+        // SetUploadEnable
+        // 设置上传开关.
+        //
+        // 当打开时上传到Docs服务器, 反之不上传. 默认: false, 即不上传.
+        //
+        //   go run main.go docs --upload=true
+        //   go run main.go docs --upload=false
         SetUploadEnable(b bool) Scanner
+
+        // SetUploadUrl
+        // 设置上传地址.
+        //
+        // 指定Markdown文件上传到哪个服务器上, 默认上传地址
+        // gs-docs.turboradio.cn.
         SetUploadUrl(s string) Scanner
+
+        // Upload
+        // 上传内容.
+        //
+        // 上传文档内容到Docs服务器上.
         Upload(name, text string) error
     }
 

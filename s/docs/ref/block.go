@@ -82,16 +82,15 @@ func (o *block) Markdown(basePath, sourcePath string) error {
     }
 
     // 4. 保存.
-    if err := o.save(req, cs, basePath, sourcePath, "0"); err != nil {
+    if err := o.saveCode(basePath, sourcePath, "0", cs); err != nil {
         return err
     }
-    if err := o.save(req, cs, basePath, sourcePath, "1"); err != nil {
+    if err := o.saveTable(basePath, sourcePath, "1", req); err != nil {
         return err
     }
-    if err := o.save(res, cs, basePath, sourcePath, "2"); err != nil {
+    if err := o.saveTable(basePath, sourcePath, "2", res); err != nil {
         return err
     }
-
     return nil
 }
 
@@ -180,7 +179,43 @@ func (o *block) each(x reflect.Value, callback func(v reflect.Value, sf reflect.
 }
 
 // 保存文档.
-func (o *block) save(table []string, code map[string]interface{}, basePath, sourcePath, suffix string) error {
+func (o *block) save(basePath, sourcePath, suffix, text string) error {
+    var (
+        name, path = strings.ToLower(
+            strings.ReplaceAll(strings.TrimPrefix(sourcePath, "/"), "/", "-") + "." + suffix),
+            fmt.Sprintf("%s/.md", basePath)
+    )
+
+    if err := os.MkdirAll(path, os.ModePerm); err != nil {
+        return err
+    }
+
+    f, err := os.OpenFile(fmt.Sprintf("%s/%s", path, name), os.O_CREATE|os.O_RDWR|os.O_TRUNC, os.ModePerm)
+    if err != nil {
+        return err
+    }
+    defer func() { _ = f.Close() }()
+
+    if _, err = f.WriteString(text); err != nil {
+        return err
+    }
+
+    return nil
+}
+
+func (o *block) saveCode(basePath, sourcePath, suffix string, cs map[string]interface{}) error {
+    buf, err := json.MarshalIndent(cs, "", "    ")
+    if err != nil {
+        return err
+    }
+    return o.save(basePath, sourcePath, suffix, string(buf))
+}
+
+func (o *block) saveTable(basePath, sourcePath, suffix string, ts []string) error {
+    return o.save(basePath, sourcePath, suffix, strings.Join(ts, "\n"))
+}
+
+func (o *block) save2(table []string, code map[string]interface{}, basePath, sourcePath, suffix string) error {
     // 1. 名称.
     var (
         name, path, text = strings.ToLower(

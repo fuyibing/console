@@ -41,47 +41,24 @@ func (o *payload) GetPath() string { return o.path }
 func (o *payload) GetPkg() string  { return o.pkg }
 
 func (o *payload) Markdown(resp bool) string {
-    var suffix = "1"
     if resp {
-        suffix = "2"
+        return o.fileRead("2")
     }
-
-    var (
-        name, path = strings.ToLower(
-            strings.ReplaceAll(
-                strings.TrimPrefix(o.path, "/"),
-                "/",
-                "-",
-            ) + "." + suffix,
-        ), fmt.Sprintf("%s%s/main/.md",
-            o.scanner.GetBasePath(),
-            o.scanner.GetDocsPath(),
-        )
-    )
-
-    src := fmt.Sprintf("%s/%s", path, name)
-    if buf, err := os.ReadFile(src); err == nil {
-        return strings.TrimSpace(string(buf))
-    }
-    return ""
+    return o.fileRead("1")
 }
 
 func (o *payload) Postman() string {
-    var (
-        name, path = strings.ToLower(
-            strings.ReplaceAll(
-                strings.TrimPrefix(o.path, "/"),
-                "/",
-                "-",
-            ) + ".0",
-        ), fmt.Sprintf("%s%s/main/.md",
-            o.scanner.GetBasePath(),
-            o.scanner.GetDocsPath(),
-        )
-    )
+    return o.fileRead("0")
+}
 
-    src := fmt.Sprintf("%s/%s", path, name)
-    if buf, err := os.ReadFile(src); err == nil {
+func (o *payload) fileName(suffix string) string {
+    name := strings.ToLower(strings.ReplaceAll(strings.TrimPrefix(o.path, "/"), "/", "-") + "." + suffix)
+    path := fmt.Sprintf("%s%s/main/.md", o.scanner.GetBasePath(), o.scanner.GetDocsPath())
+    return fmt.Sprintf("%s/%s", path, name)
+}
+
+func (o *payload) fileRead(suffix string) string {
+    if buf, err := os.ReadFile(o.fileName(suffix)); err == nil {
         return strings.TrimSpace(string(buf))
     }
     return ""

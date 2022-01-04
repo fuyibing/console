@@ -27,6 +27,7 @@ type command struct {
     uploadUrl                          string
 }
 
+// New
 // 构造导出文档实例.
 func New() *command {
     // 1. 构建实例.
@@ -92,7 +93,7 @@ func New() *command {
 // 后置.
 func (o *command) after(c i.IConsole) {
     if o.clean {
-        o.scanner.Clean()
+        _ = o.scanner.Clean()
     }
 }
 

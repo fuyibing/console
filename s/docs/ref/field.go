@@ -55,6 +55,9 @@ func NewField(level int) Field {
 // Code
 // 追加代码片段.
 func (o *field) Code(cs map[string]interface{}) error {
+    if o.executable {
+        return nil
+    }
     if o.child != nil {
         v := make(map[string]interface{})
         if err := o.child.Code(v); err != nil {
@@ -94,6 +97,10 @@ func (o *field) Code(cs map[string]interface{}) error {
 // Request
 // 入参数据.
 func (o *field) Request(s *[]string) (err error) {
+    if o.executable {
+        return nil
+    }
+
     // 1. 行数据.
     *s = append(*s,
         fmt.Sprintf(
@@ -117,6 +124,10 @@ func (o *field) Request(s *[]string) (err error) {
 // Response
 // 出参数据.
 func (o *field) Response(s *[]string) (err error) {
+    if o.executable {
+        return nil
+    }
+
     // 1. 行数据.
     *s = append(*s,
         fmt.Sprintf(
@@ -325,6 +336,9 @@ func (o *field) runStructField(sf reflect.StructField) error {
         if v := sf.Tag.Get(k); v != "" {
             o.fieldName = v
         }
+    }
+    if o.fieldName == "-" {
+        o.executable = true
     }
 
     // 3. 标题.
