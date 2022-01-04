@@ -372,7 +372,6 @@ func (o *action) render() (text string, err error) {
         ns := make([]int, 0)
         for n, _ := range o.responses {
             ns = append(ns, n)
-            println("response: ", n)
         }
         sort.Ints(ns)
 
