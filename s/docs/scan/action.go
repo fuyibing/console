@@ -217,12 +217,7 @@ func (o *action) Postman() interface{} {
                                 cvz = false
                             }
                             if cvz {
-
-
-
                                 if cvb, cve := json.MarshalIndent(cvd, "", "    "); cve == nil {
-                                    // text += fmt.Sprintf("**Example**: \n\n```\n%s\n```\n\n", cvb)
-
                                     response = append(response, map[string]interface{}{
                                         "name":   "Result",
                                         "body":   string(cvb),
@@ -231,17 +226,6 @@ func (o *action) Postman() interface{} {
                                 }
                             }
                         }
-
-
-
-
-
-
-                        // response = append(response, map[string]interface{}{
-                        //     "name":   "Result",
-                        //     "body":   s,
-                        //     "status": 200,
-                        // })
                     }
                 }
             }
