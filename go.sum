@@ -57,6 +57,8 @@ github.com/fsnotify/fsnotify v1.4.9 h1:hsms1Qyu0jgnwNXIxa+/V/PDsU6CfLf6CNO8H7IWo
 github.com/fsnotify/fsnotify v1.4.9/go.mod h1:znqG4EE+3YCdAaPaxE2ZRY/06pZUdp0tY4IgpuI1SZQ=
 github.com/fuyibing/db v1.0.2 h1:0n8hj8GZlg4xBRXgm+a45DdLZxhtFDpNjbt8vs+7PfM=
 github.com/fuyibing/db v1.0.2/go.mod h1:iO9d8akHCv6gpK7I5wFHVP5lnzkpYXxktU82ELQ1jT4=
+github.com/fuyibing/gdoc v0.2.5 h1:NbpAO+AobqzeRgziUmyEYoJGpIxAullIIZB+N0yt7gA=
+github.com/fuyibing/gdoc v0.2.5/go.mod h1:+zIqIAxDfWSoeWG//QzsySBvtqZrrhxs4f8NpEszaEA=
 github.com/fuyibing/log v1.0.0 h1:8mhDYUYrIRO0wk0P6pQ0w+nEosgo8xQXCdzFpDtNQNg=
 github.com/fuyibing/log v1.0.0/go.mod h1:xFn/QpZNKTy1hz6MjRYsZYb7oxykHNMAjeSLuhvOa1A=
 github.com/fuyibing/log/v2 v2.0.2/go.mod h1:tb954OCRGzjfvXLA3h1bdCcVI4MSxY7pipE7FlGg7vk=
