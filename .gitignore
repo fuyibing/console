@@ -1,9 +1,4 @@
-# ignore files
-.idea
-app/
-main/
-tests/
-tmp/
+# Ignore
 
-go.sum
-*.bak
+.idea/
+
