@@ -6,7 +6,38 @@
 package docs
 
 import (
+	"fmt"
 	"github.com/fuyibing/console/v3/managers"
+	"github.com/fuyibing/gdoc/adapters/markdown"
+	"github.com/fuyibing/gdoc/adapters/postman"
+	"github.com/fuyibing/gdoc/base"
+	"github.com/fuyibing/gdoc/conf"
+	"github.com/fuyibing/gdoc/scanners"
+)
+
+const (
+	CmdDesc = "Generate application documents as markdown files or postman collection and so on"
+	CmdName = "docs"
+
+	OptAdapter        = "adapter"
+	OptAdapterByte    = 'a'
+	OptAdapterDesc    = "Specify document formatter, accept: postman, markdown"
+	OptAdapterDefault = "markdown"
+
+	OptBase        = "base"
+	OptBaseByte    = 'b'
+	OptBaseDesc    = "Specify your working base path"
+	OptBaseDefault = "./"
+
+	OptController        = "controller"
+	OptControllerByte    = 'c'
+	OptControllerDesc    = "Specify your controller path"
+	OptControllerDefault = "/app/controllers"
+
+	OptDocument        = "document"
+	OptDocumentByte    = 'd'
+	OptDocumentDesc    = "Built documents storage location"
+	OptDocumentDefault = "/docs/api"
 )
 
 type Command struct {
@@ -17,27 +48,64 @@ type Command struct {
 
 // Handle
 // callable registered on command manager interface.
-func (o *Command) Handle(m managers.Manager, a managers.Arguments) error {
-	return nil
+func (o *Command) Handle(_ managers.Manager, _ managers.Arguments) (err error) {
+	var (
+		s1, s2, s3, s4 string
+	)
+
+	// Read
+	// options value.
+	if s1, err = o.Command.GetOption(OptAdapter).ToString(); err != nil {
+		return
+	}
+	if s2, err = o.Command.GetOption(OptBase).ToString(); err != nil {
+		return
+	}
+	if s3, err = o.Command.GetOption(OptController).ToString(); err != nil {
+		return
+	}
+	if s4, err = o.Command.GetOption(OptDocument).ToString(); err != nil {
+		return
+	}
+
+	// Use
+	// option value.
+	conf.Path.SetBasePath(s2)
+	conf.Path.SetControllerPath(s3)
+	conf.Path.SetDocumentPath(s4)
+
+	// Scan
+	// controller files.
+	scanners.Scanner.Scan()
+
+	switch s1 {
+	case "postman":
+		postman.New(base.Mapper).Run()
+	case "markdown":
+		markdown.New(base.Mapper).Run()
+	default:
+		err = fmt.Errorf("unknown adapter")
+	}
+
+	return
 }
 
 // /////////////////////////////////////////////////////////////
 // Access and constructor methods
 // /////////////////////////////////////////////////////////////
 
-func (o *Command) initField() *Command {
+func (o *Command) InitField() *Command {
 	o.Command = managers.NewCommand(o.Name)
-	o.Command.SetHandler(o.Handle)
-	o.Command.SetDescription("Generate application documents as markdown files or postman collection and so on")
+	o.Command.SetDescription(CmdDesc).SetHandler(o.Handle)
 	return o
 }
 
-func (o *Command) initOption() *Command {
+func (o *Command) InitOption() *Command {
 	o.Err = o.Command.AddOption(
-		managers.NewOption("adapter").SetShortName('a').SetDescription("Specify document formatter, accept: postman, markdown").SetDefault("markdown"),
-		managers.NewOption("base").SetShortName('b').SetDescription("Specify your working base path").SetDefault("./"),
-		managers.NewOption("controller").SetShortName('c').SetDescription("Specify your controller path").SetDefault("/app/controllers"),
-		managers.NewOption("document").SetShortName('d').SetDescription("Built documents storage location").SetDefault("/docs/api"),
+		managers.NewOption(OptAdapter).SetShortName(OptAdapterByte).SetDescription(OptAdapterDesc).SetDefault(OptAdapterDefault),
+		managers.NewOption(OptBase).SetShortName(OptBaseByte).SetDescription(OptBaseDesc).SetDefault(OptBaseDefault),
+		managers.NewOption(OptController).SetShortName(OptControllerByte).SetDescription(OptControllerDesc).SetDefault(OptControllerDefault),
+		managers.NewOption(OptDocument).SetShortName(OptDocumentByte).SetDescription(OptDocumentDesc).SetDefault(OptDocumentDefault),
 	)
 
 	return o
@@ -45,10 +113,16 @@ func (o *Command) initOption() *Command {
 
 // New
 // function create and return instance.
+//
+//   go run main.go docs \
+//     --adapter=markdown \
+//     --base=./ \
+//     --controller=/app/controllers \
+//     --document=/docs/api
 func New() (managers.Command, error) {
-	o := (&Command{Name: "docs"}).
-		initField().
-		initOption()
+	o := (&Command{Name: CmdName}).
+		InitField().
+		InitOption()
 
 	return o.Command, o.Err
 }

@@ -4,6 +4,7 @@ go 1.13
 
 require (
 	github.com/armon/go-metrics v0.3.10 // indirect
+	github.com/fuyibing/gdoc v0.2.6
 	github.com/google/btree v1.0.0 // indirect
 	github.com/google/go-cmp v0.5.8 // indirect
 	github.com/hashicorp/consul/api v1.18.0
