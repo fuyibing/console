@@ -12,6 +12,7 @@ import (
 	"github.com/fuyibing/gdoc/adapters/postman"
 	"github.com/fuyibing/gdoc/base"
 	"github.com/fuyibing/gdoc/conf"
+	"github.com/fuyibing/gdoc/reflectors"
 	"github.com/fuyibing/gdoc/scanners"
 )
 
@@ -78,6 +79,14 @@ func (o *Command) Handle(_ managers.Manager, _ managers.Arguments) (err error) {
 	// controller files.
 	scanners.Scanner.Scan()
 
+	// Reflect.
+	ref := reflectors.New(base.Mapper)
+	ref.Configure()
+
+	if err = ref.Make(); err != nil {
+		return
+	}
+
 	switch s1 {
 	case "postman":
 		postman.New(base.Mapper).Run()
@@ -85,6 +94,10 @@ func (o *Command) Handle(_ managers.Manager, _ managers.Arguments) (err error) {
 		markdown.New(base.Mapper).Run()
 	default:
 		err = fmt.Errorf("unknown adapter")
+	}
+
+	if err != nil {
+		ref.Clean()
 	}
 
 	return
