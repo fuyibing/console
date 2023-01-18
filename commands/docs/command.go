@@ -74,6 +74,7 @@ func (o *Command) Handle(_ managers.Manager, _ managers.Arguments) (err error) {
 	conf.Path.SetBasePath(s2)
 	conf.Path.SetControllerPath(s3)
 	conf.Path.SetDocumentPath(s4)
+	conf.Config.Load()
 
 	// Scan
 	// controller files.
