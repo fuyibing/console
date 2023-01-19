@@ -97,7 +97,7 @@ func (o *Command) Handle(_ managers.Manager, _ managers.Arguments) (err error) {
 		err = fmt.Errorf("unknown adapter")
 	}
 
-	if err != nil {
+	if err == nil {
 		ref.Clean()
 	}
 
