@@ -19,7 +19,7 @@ var (
 	ArgumentsRegexOptionName    = regexp.MustCompile(`^(-+)([a-zA-Z0-9][_a-zA-Z0-9-]*)$`)
 	ArgumentsRegexOptionPairs   = regexp.MustCompile(`^-+([a-zA-Z0-9][_a-zA-Z0-9-]*)=(.*)$`)
 	ArgumentsRegexScriptBinary  = regexp.MustCompile(`^\./[_a-zA-Z0-9-]+$`)
-	ArgumentsRegexScriptWorking = regexp.MustCompile(`^\[_a-zA-Z0-9-]+$`)
+	ArgumentsRegexScriptWorking = regexp.MustCompile(`^[_a-zA-Z0-9-]+$`)
 )
 
 type (
